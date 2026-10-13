@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "scripts": { "build": "python scripts/build.py" },
+  "devDependencies": { "mapshaper": "0.7.84", "osmtogeojson": "3.0.0-beta.5" }
+}

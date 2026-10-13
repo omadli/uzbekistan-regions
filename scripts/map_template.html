@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O'zbekiston tumanlari</title>
+<style>
+  :root {
+    --bg: #f1f5f9; --panel: #fff; --text: #0f172a; --muted: #64748b; --line: #e2e8f0;
+    --hover: #f8fafc; --accent: #2563eb; --accent-soft: #eff6ff;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; }
+
+  aside { width: 340px; flex: none; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .head { padding: 20px 20px 16px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
+  .stats { color: var(--muted); font-size: 12.5px; margin: 2px 0 14px; }
+  .search { position: relative; }
+  .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .search input { width: 100%; padding: 9px 34px 9px 34px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--hover); outline: none; transition: border-color .15s, background .15s; }
+  .search input:focus { border-color: var(--accent); background: #fff; }
+  .search input::-webkit-search-cancel-button { display: none; }
+  #clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--muted); font-size: 18px; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: none; }
+  #clear:hover { background: var(--line); }
+
+  #card { margin: 14px 16px 6px; padding: 14px 16px; border-radius: 10px; background: var(--accent-soft); border: 1px solid #dbeafe; display: none; }
+  #card.show { display: block; }
+  #card .t { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  #card b { font-size: 16px; }
+  #card .alt { color: #334155; font-size: 13px; margin-top: 2px; }
+  #card .reg { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+  #card button { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+  #card button:hover { background: #dbeafe; }
+  .badge { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: #fef3c7; color: #92400e; white-space: nowrap; }
+
+  #list { overflow: auto; flex: 1; padding: 6px 8px 16px; min-height: 0; }
+  .grp { border-radius: 8px; }
+  .grp + .grp { margin-top: 2px; }
+  .gh { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; background: none; font: inherit; font-weight: 600; color: var(--text); text-align: left; cursor: pointer; border-radius: 8px; }
+  .gh:hover { background: var(--hover); }
+  .grp.active > .gh { background: var(--accent-soft); }
+  .sw { width: 12px; height: 12px; border-radius: 4px; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .gh .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cnt { font-size: 12px; font-weight: 500; color: var(--muted); background: var(--bg); padding: 0 8px; border-radius: 999px; }
+  .chev { color: var(--muted); transition: transform .15s; flex: none; }
+  .grp.open .chev { transform: rotate(90deg); }
+  .items { display: none; padding: 2px 0 6px; }
+  .grp.open .items { display: block; }
+  .it { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px 6px 32px; border-radius: 6px; cursor: pointer; color: #334155; border-left: 3px solid transparent; }
+  .it:hover { background: var(--hover); }
+  .it.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; border-left-color: var(--accent); }
+  mark { background: #fde68a; color: inherit; border-radius: 2px; }
+  .empty { padding: 24px 12px; color: var(--muted); text-align: center; display: none; }
+
+  main { flex: 1; position: relative; overflow: hidden; }
+  #map { width: 100%; height: 100%; cursor: grab; }
+  #map svg { width: 100%; height: 100%; display: block; }
+  #map path { vector-effect: non-scaling-stroke; }
+  #map g:not(#regions) path { stroke-width: .8; cursor: pointer; transition: filter .1s, opacity .15s; }
+  #map g:not(#regions) path:hover { filter: brightness(.85); }
+  #map path.sel { fill: var(--accent) !important; }
+  #map #regions { pointer-events: none; }
+  #map.dim g[id^="UZ-"]:not(.focus) path { opacity: .3; }
+  #map #labels { display: none; }
+  #annot { pointer-events: none; transition: opacity .2s; }
+  #annot.off { opacity: 0; }
+  #annot text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-weight: 650; fill: #1e293b; paint-order: stroke; stroke: rgba(255,255,255,.9); stroke-linejoin: round; }
+  #annot line { stroke: #475569; vector-effect: non-scaling-stroke; stroke-width: 1; }
+  #annot circle { fill: #1e293b; stroke: #fff; vector-effect: non-scaling-stroke; stroke-width: 1.2; }
+  #tip { position: fixed; pointer-events: none; background: #0f172a; color: #fff; padding: 6px 9px; border-radius: 6px; display: none; z-index: 2; font-size: 13px; }
+  .ctl { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .ctl button { width: 34px; height: 34px; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; font-size: 18px; cursor: pointer; }
+  .ctl button:hover { background: var(--hover); }
+  footer { position: absolute; left: 12px; bottom: 8px; font-size: 11px; color: var(--muted); }
+  @media (max-width: 700px) {
+    body { flex-direction: column-reverse; }
+    aside { width: auto; height: 48vh; border-right: 0; border-top: 1px solid var(--line); }
+    .head { padding: 14px 16px 12px; }
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="head">
+    <h1>O'zbekiston xaritasi</h1>
+    <div class="stats" id="stats"></div>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Tuman yoki shahar qidirish…" aria-label="Qidirish" autocomplete="off">
+      <button id="clear" aria-label="Tozalash">×</button>
+    </div>
+  </div>
+  <div id="card"></div>
+  <div id="list"><div class="empty" id="empty">Hech narsa topilmadi</div></div>
+</aside>
+<main>
+  <div id="map">
+{{SVG}}
+  </div>
+  <div class="ctl">
+    <button id="zin" title="Yaqinlashtirish">+</button>
+    <button id="zout" title="Uzoqlashtirish">−</button>
+    <button id="zreset" title="Butun xarita">⟲</button>
+  </div>
+  <footer>Chegaralar: © OpenStreetMap contributors (ODbL)</footer>
+</main>
+<div id="tip"></div>
+<script>
+const svg = document.querySelector('#map svg');
+const NS = 'http://www.w3.org/2000/svg';
+const CALLOUT = { 'UZ-TK': [-95, -70], 'UZ-NG': [-15, -150], 'UZ-AN': [0, -85], 'UZ-FA': [35, 85], 'UZ-SI': [35, 75], 'UZ-XO': [-55, 95] };
+const SHIFT = { 'UZ-TO': [10, -58] };
+const SHORT = { 'UZ-QR': "Qoraqalpog'iston" };
+const CHEV = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 6 6 6-6 6"/></svg>';
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const groups = [...svg.querySelectorAll('g[id^="UZ-"]')]
+  .sort((a, b) => a.firstElementChild.dataset.region_name.localeCompare(b.firstElementChild.dataset.region_name, 'uz'));
+let cur;
+const home = [svg.viewBox.baseVal.x, svg.viewBox.baseVal.y, svg.viewBox.baseVal.width, svg.viewBox.baseVal.height];
+let vb = [...home];
+const setVB = () => { svg.setAttribute('viewBox', vb.join(' ')); updateLabels(); };
+let total = 0;
+
+groups.forEach((g, i) => {
+  const color = g.querySelector('path').getAttribute('fill');
+  const paths = [...g.querySelectorAll('path')].sort((a, b) => a.dataset.name_uz.localeCompare(b.dataset.name_uz, 'uz'));
+  total += paths.length;
+  const grp = document.createElement('div');
+  grp.className = 'grp';
+  grp.innerHTML = `<button class="gh">${CHEV}<span class="sw" style="background:${color}"></span><span class="name">${esc(paths[0].dataset.region_name)}</span><span class="cnt">${paths.length}</span></button><div class="items"></div>`;
+  const items = grp.querySelector('.items');
+  grp.querySelector('.gh').onclick = () => {
+    const opening = !grp.classList.contains('open');
+    grp.classList.toggle('open', opening);
+    opening ? focusRegion(g) : resetView();
+  };
+  paths.forEach(p => {
+    const it = document.createElement('div');
+    it.className = 'it';
+    it._label = p.dataset.name_uz;
+    it._badge = p.dataset.type === 'city' ? '<span class="badge">shahar</span>' : '';
+    it.innerHTML = `<span>${esc(it._label)}</span>${it._badge}`;
+    it.onclick = () => select(p, true);
+    p._item = it; p._grp = grp; p._g = g;
+    items.appendChild(it);
+  });
+  g._grp = grp;
+  list.insertBefore(grp, empty);
+});
+stats.textContent = `${groups.length} ta hudud · ${total} ta tuman va shahar`;
+
+const annot = document.createElementNS(NS, 'g');
+annot.id = 'annot';
+svg.appendChild(annot);
+const labels = [...svg.querySelectorAll('#labels text')].map(t => {
+  const code = t.dataset.region;
+  const m = t.getAttribute('transform').match(/[-\d.]+/g).map(Number);
+  const name = SHORT[code] || t.textContent.replace(/ viloyati$/, '');
+  const off = CALLOUT[code];
+  const el = document.createElementNS(NS, 'g');
+  if (off) {
+    const [x2, y2] = [m[0] + off[0], m[1] + off[1]];
+    el.innerHTML = `<line x1="${m[0]}" y1="${m[1]}" x2="${x2}" y2="${y2}"/><circle cx="${m[0]}" cy="${m[1]}"/><text x="${x2}" y="${y2}" text-anchor="${off[0] < -20 ? 'end' : off[0] > 20 ? 'start' : 'middle'}" dy="${off[1] < 0 ? '-.4em' : '1em'}"></text>`;
+  } else {
+    const [sx, sy] = SHIFT[code] || [0, 0];
+    el.innerHTML = `<text x="${m[0] + sx}" y="${m[1] + sy}" text-anchor="middle" dy=".35em"></text>`;
+  }
+  el.querySelector('text').textContent = name;
+  annot.appendChild(el);
+  return el;
+});
+function updateLabels() {
+  const k = Math.max(vb[2] / svg.clientWidth, vb[3] / svg.clientHeight);
+  annot.style.fontSize = 12.5 * k + 'px';
+  annot.querySelectorAll('text').forEach(t => t.style.strokeWidth = 3.5 * k);
+  annot.querySelectorAll('circle').forEach(c => c.setAttribute('r', 2.6 * k));
+  annot.classList.toggle('off', !!cur || map.classList.contains('dim') || vb[2] < home[2] * 0.75);
+}
+addEventListener('resize', updateLabels);
+updateLabels();
+
+function zoomTo(box, pad = 0.15) {
+  vb = [box.x - box.width * pad, box.y - box.height * pad, box.width * (1 + pad * 2), box.height * (1 + pad * 2)];
+  setVB();
+}
+function focusRegion(g) {
+  groups.forEach(x => { x.classList.toggle('focus', x === g); x._grp.classList.toggle('active', x === g); });
+  map.classList.add('dim');
+  zoomTo(g.getBBox());
+}
+function resetView() {
+  vb = [...home]; setVB();
+  map.classList.remove('dim');
+  groups.forEach(x => x._grp.classList.remove('active'));
+  updateLabels();
+}
+function select(p, zoom) {
+  cur?.classList.remove('sel'); cur?._item.classList.remove('on');
+  cur = p; p.classList.add('sel'); p._item.classList.add('on');
+  p._grp.classList.add('open');
+  groups.forEach(x => x._grp.classList.toggle('active', x === p._g));
+  p._item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (zoom) zoomTo(p.getBBox(), 1.5);
+  updateLabels();
+  const d = p.dataset;
+  card.className = 'show';
+  card.innerHTML = `<div class="t"><div><b>${esc(d.name_uz)}</b> ${p._item._badge}</div><button class="x" aria-label="Yopish">×</button></div>
+    <div class="alt">${esc(d.name_ru)}</div><div class="alt">${esc(d.name_en)}</div>
+    <div class="reg"><span class="sw" style="background:${p.getAttribute('fill')}"></span>${esc(d.region_name)}</div>`;
+  card.querySelector(".x").onclick = deselect;
+}
+function deselect() {
+  cur?.classList.remove('sel'); cur?._item.classList.remove('on');
+  cur = null; card.className = '';
+  updateLabels();
+}
+
+svg.addEventListener('mousemove', e => {
+  const d = e.target.dataset;
+  if (!d?.name_uz || dragging) return tip.style.display = 'none';
+  tip.innerHTML = `<b>${esc(d.name_uz)}</b><br><small>${esc(d.region_name)}</small>`;
+  Object.assign(tip.style, { display: 'block', left: e.clientX + 12 + 'px', top: e.clientY + 12 + 'px' });
+});
+svg.addEventListener('mouseleave', () => tip.style.display = 'none');
+svg.addEventListener('click', e => { if (!moved && e.target.dataset?.name_uz) select(e.target, false); });
+
+q.oninput = () => {
+  const s = q.value.trim().toLowerCase();
+  clear.style.display = s ? 'block' : 'none';
+  let shown = 0;
+  document.querySelectorAll('.grp').forEach(grp => {
+    let hits = 0;
+    grp.querySelectorAll('.it').forEach(it => {
+      const i = it._label.toLowerCase().indexOf(s);
+      it.hidden = s && i < 0;
+      if (s && i >= 0) {
+        hits++;
+        it.firstChild.innerHTML = esc(it._label.slice(0, i)) + '<mark>' + esc(it._label.slice(i, i + s.length)) + '</mark>' + esc(it._label.slice(i + s.length));
+      } else it.firstChild.textContent = it._label;
+    });
+    grp.hidden = s && !hits;
+    grp.querySelector('.cnt').textContent = s ? hits : grp.querySelectorAll('.it').length;
+    grp.classList.toggle('open', s ? hits > 0 : grp.classList.contains('active'));
+    shown += s ? hits : 1;
+  });
+  empty.style.display = shown ? 'none' : 'block';
+};
+q.onkeydown = e => {
+  if (e.key === 'Enter') document.querySelector('.it:not([hidden])')?.click();
+  if (e.key === 'Escape') clear.onclick();
+};
+clear.onclick = () => { q.value = ''; q.oninput(); q.focus(); };
+
+function zoom(k, cx = vb[0] + vb[2] / 2, cy = vb[1] + vb[3] / 2) {
+  vb = [cx - (cx - vb[0]) * k, cy - (cy - vb[1]) * k, vb[2] * k, vb[3] * k]; setVB();
+}
+const toSvg = e => { const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse()); return [pt.x, pt.y]; };
+svg.addEventListener('wheel', e => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.2 : 1 / 1.2, ...toSvg(e)); }, { passive: false });
+zin.onclick = () => zoom(1 / 1.5);
+zout.onclick = () => zoom(1.5);
+zreset.onclick = () => { resetView(); document.querySelectorAll('.grp').forEach(g => g.classList.remove('open')); };
+let dragging = null, moved = false;
+svg.addEventListener('pointerdown', e => { dragging = toSvg(e); moved = false; map.style.cursor = 'grabbing'; });
+addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const [x, y] = toSvg(e), dx = x - dragging[0], dy = y - dragging[1];
+  if (Math.abs(dx) + Math.abs(dy) > 0.5) moved = true;
+  vb[0] -= dx; vb[1] -= dy; setVB();
+});
+addEventListener('pointerup', () => { dragging = null; map.style.cursor = ''; });
+</script>
+</body>
+</html>
